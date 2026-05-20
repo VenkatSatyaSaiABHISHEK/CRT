@@ -84,17 +84,20 @@ app.post('/api/extract-colab', async (req, res) => {
 
 // Local code execution endpoint replacing Piston API
 app.post('/api/execute', (req, res) => {
-  const { language, code } = req.body;
+  const { language, code, input } = req.body;
   if (!code) return res.status(400).json({ error: 'No code provided' });
 
   const id = Date.now() + '_' + Math.floor(Math.random() * 100000);
+  const inFile = path.join(os.tmpdir(), `input_${id}.txt`);
+  if (input) fs.writeFileSync(inFile, input);
+  const inputRedirect = input ? ` < "${inFile}"` : '';
   
   if (language === 'python') {
     const tmpFile = path.join(os.tmpdir(), `script_${id}.py`);
     fs.writeFileSync(tmpFile, code);
     
-    exec(`python "${tmpFile}"`, (error, stdout, stderr) => {
-      try { fs.unlinkSync(tmpFile); } catch (e) {}
+    exec(`python "${tmpFile}"${inputRedirect}`, (error, stdout, stderr) => {
+      try { fs.unlinkSync(tmpFile); if (input) fs.unlinkSync(inFile); } catch (e) {}
       if (error) {
         return res.json({ output: stderr || error.message });
       }
@@ -108,12 +111,12 @@ app.post('/api/execute', (req, res) => {
     
     exec(`gcc "${cFile}" -o "${exeFile}"`, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
-        try { fs.unlinkSync(cFile); } catch (e) {}
+        try { fs.unlinkSync(cFile); if (input) fs.unlinkSync(inFile); } catch (e) {}
         return res.json({ output: compileStderr || compileError.message });
       }
       
-      exec(`"${exeFile}"`, (runError, runStdout, runStderr) => {
-        try { fs.unlinkSync(cFile); fs.unlinkSync(exeFile); } catch (e) {}
+      exec(`"${exeFile}"${inputRedirect}`, (runError, runStdout, runStderr) => {
+        try { fs.unlinkSync(cFile); fs.unlinkSync(exeFile); if (input) fs.unlinkSync(inFile); } catch (e) {}
         if (runError) {
           return res.json({ output: runStderr || runError.message });
         }

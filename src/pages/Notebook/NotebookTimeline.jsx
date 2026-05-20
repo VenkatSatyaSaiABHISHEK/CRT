@@ -175,10 +175,11 @@ const NotebookTimeline = () => {
     try {
       const lang = codeLabLanguage === 'python' ? 'python' : 'c';
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const cellInput = document.getElementById(`input-${id}`)?.value || '';
       const response = await fetch(`${API_BASE}/api/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Bypass-Tunnel-Reminder": "true" },
-        body: JSON.stringify({ language: lang, code: code })
+        body: JSON.stringify({ language: lang, code: code, input: cellInput })
       });
       const result = await response.json();
       if (result.error) throw new Error(result.error);
@@ -778,6 +779,15 @@ const NotebookTimeline = () => {
                                 }}
                               />
                             </div>
+                          </div>
+
+                          {/* Standard Input */}
+                          <div className="w-full border-t border-gray-100 flex p-2 bg-gray-50/50 rounded-b-lg">
+                            <textarea 
+                              id={`input-${cell.id}`}
+                              placeholder="Standard Input (stdin) - Optional" 
+                              className="w-full bg-transparent text-xs p-1 text-gray-600 outline-none resize-y font-mono min-h-[30px] custom-scrollbar"
+                            />
                           </div>
                         </div>
                       </div>
