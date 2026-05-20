@@ -89,16 +89,18 @@ app.post('/api/execute', (req, res) => {
 
   const id = Date.now() + '_' + Math.floor(Math.random() * 100000);
   const inFile = path.join(os.tmpdir(), `input_${id}.txt`);
-  if (input) fs.writeFileSync(inFile, input);
-  const inputRedirect = input ? ` < "${inFile}"` : '';
+  fs.writeFileSync(inFile, input || '');
+  const inputRedirect = ` < "${inFile}"`;
+  const execOptions = { timeout: 5000 }; // 5 second timeout to prevent infinite loops
   
   if (language === 'python') {
     const tmpFile = path.join(os.tmpdir(), `script_${id}.py`);
     fs.writeFileSync(tmpFile, code);
     
-    exec(`python "${tmpFile}"${inputRedirect}`, (error, stdout, stderr) => {
-      try { fs.unlinkSync(tmpFile); if (input) fs.unlinkSync(inFile); } catch (e) {}
+    exec(`python "${tmpFile}"${inputRedirect}`, execOptions, (error, stdout, stderr) => {
+      try { fs.unlinkSync(tmpFile); fs.unlinkSync(inFile); } catch (e) {}
       if (error) {
+        if (error.killed) return res.json({ output: "Error: Execution timed out (infinite loop detected or took longer than 5 seconds)." });
         return res.json({ output: stderr || error.message });
       }
       res.json({ output: stdout || stderr });
@@ -115,9 +117,10 @@ app.post('/api/execute', (req, res) => {
         return res.json({ output: compileStderr || compileError.message });
       }
       
-      exec(`"${exeFile}"${inputRedirect}`, (runError, runStdout, runStderr) => {
-        try { fs.unlinkSync(cFile); fs.unlinkSync(exeFile); if (input) fs.unlinkSync(inFile); } catch (e) {}
+      exec(`"${exeFile}"${inputRedirect}`, execOptions, (runError, runStdout, runStderr) => {
+        try { fs.unlinkSync(cFile); fs.unlinkSync(exeFile); fs.unlinkSync(inFile); } catch (e) {}
         if (runError) {
+          if (runError.killed) return res.json({ output: "Error: Execution timed out (infinite loop detected or took longer than 5 seconds)." });
           return res.json({ output: runStderr || runError.message });
         }
         res.json({ output: runStdout || runStderr });

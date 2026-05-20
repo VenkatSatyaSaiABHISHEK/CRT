@@ -782,11 +782,14 @@ const NotebookTimeline = () => {
                           </div>
 
                           {/* Standard Input */}
-                          <div className="w-full border-t border-gray-100 flex p-2 bg-gray-50/50 rounded-b-lg">
+                          <div className="w-full border-t border-gray-200 bg-gray-50 flex flex-col rounded-b-lg overflow-hidden">
+                            <div className="px-3 py-1.5 bg-gray-100 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                              Standard Input (stdin)
+                            </div>
                             <textarea 
                               id={`input-${cell.id}`}
-                              placeholder="Standard Input (stdin) - Optional" 
-                              className="w-full bg-transparent text-xs p-1 text-gray-600 outline-none resize-y font-mono min-h-[30px] custom-scrollbar"
+                              placeholder="Type input here (e.g., 5)..." 
+                              className="w-full bg-transparent text-[13px] p-3 text-gray-700 outline-none resize-y font-mono min-h-[45px] custom-scrollbar"
                             />
                           </div>
                         </div>
