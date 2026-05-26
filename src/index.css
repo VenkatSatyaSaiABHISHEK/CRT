@@ -5,6 +5,37 @@
   --color-surface-dark: #12121a;
   --color-primary-glow: rgba(99, 102, 241, 0.5);
   --color-primary: #6366f1;
+
+  /* Custom theme colors to support non-standard values used in classes */
+  --color-indigo-55: #ebefff;
+  --color-indigo-150: #b4c3ff;
+  --color-indigo-250: #939ff9;
+  --color-indigo-550: #5655eb;
+  --color-indigo-650: #483ecd;
+  --color-indigo-750: #3d34b6;
+  --color-indigo-755: #3a31ae;
+  --color-indigo-850: #342f92;
+
+  --color-slate-205: #dce4ef;
+  --color-slate-250: #d6dee9;
+  --color-slate-450: #7c8ba1;
+  --color-slate-550: #55647a;
+  --color-slate-650: #3d4b5f;
+  --color-slate-655: #3a475a;
+  --color-slate-850: #17202f;
+
+  --color-gray-250: #dadde2;
+  --color-gray-450: #8895a5;
+  --color-gray-650: #4e5a6a;
+
+  --color-amber-205: #fde074;
+  --color-amber-250: #fcdb6c;
+
+  --color-emerald-250: #8aeac5;
+  --color-emerald-450: #10b981;
+
+  --color-red-505: #ef4444;
+  --color-red-650: #be123c;
 }
 
 @layer base {
