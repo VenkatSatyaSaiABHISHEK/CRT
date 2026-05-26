@@ -245,9 +245,11 @@ const CommunityDetail = ({ community, onBack }) => {
 
     let temp = new Date(start);
     let tempCount = 1;
-    while (temp < today) {
+    let loopLimit = 0;
+    while (temp < today && loopLimit < 1000) {
       temp.setDate(temp.getDate() + 1);
       if (temp.getDay() !== 0) tempCount++;
+      loopLimit++;
     }
     return (today < start) ? 1 : tempCount;
   }, [startDateStr]);

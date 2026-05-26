@@ -78,9 +78,11 @@ const SharedNotebook = () => {
 
         let temp = new Date(start);
         let tempCount = 1;
-        while (temp < today) {
+        let loopLimit = 0;
+        while (temp < today && loopLimit < 1000) {
           temp.setDate(temp.getDate() + 1);
           if (temp.getDay() !== 0) tempCount++;
+          loopLimit++;
         }
         const calculatedCurrentDay = (today < start) ? 1 : tempCount;
         setCurrentDay(calculatedCurrentDay);

@@ -36,9 +36,11 @@ const NotebookDashboard = () => {
 
     let temp = new Date(start);
     let tempCount = 1;
-    while (temp < today) {
+    let loopLimit1 = 0;
+    while (temp < today && loopLimit1 < 1000) {
       temp.setDate(temp.getDate() + 1);
       if (temp.getDay() !== 0) tempCount++;
+      loopLimit1++;
     }
     const todayDayNumber = (today < start) ? 1 : tempCount;
 
@@ -54,23 +56,27 @@ const NotebookDashboard = () => {
     let iterDay = 1;
     
     // Fast forward to startDayNumber
-    while (iterDay < startDayNumber) {
+    let loopLimit2 = 0;
+    while (iterDay < startDayNumber && loopLimit2 < 1000) {
       if (current.getDay() !== 0) {
         iterDay++;
       }
       current.setDate(current.getDate() + 1);
+      loopLimit2++;
     }
 
     let targetLength = Math.max(todayDayNumber + 2 - startDayNumber + 1, 7);
     if (targetLength > 100) targetLength = 100;
 
-    while (winDates.length < targetLength) {
+    let loopLimit3 = 0;
+    while (winDates.length < targetLength && loopLimit3 < 1000) {
       if (current.getDay() !== 0) {
         winDates.push(new Date(current));
         winDays.push(iterDay);
         iterDay++;
       }
       current.setDate(current.getDate() + 1);
+      loopLimit3++;
     }
 
     return { currentDay: todayDayNumber, windowDates: winDates, windowDays: winDays };

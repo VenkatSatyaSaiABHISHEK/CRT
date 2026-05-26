@@ -61,9 +61,11 @@ const DashboardOverview = () => {
       if (today < start) {
          setCurrentDay(1);
       } else {
-         while (current < today) {
+         let loopLimit = 0;
+         while (current < today && loopLimit < 1000) {
            current.setDate(current.getDate() + 1);
            if (current.getDay() !== 0) dayCount++;
+           loopLimit++;
          }
          setCurrentDay(dayCount);
       }
