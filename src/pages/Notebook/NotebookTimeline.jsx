@@ -248,6 +248,10 @@ const NotebookTimeline = () => {
   };
 
   const handleAutoAIErrorExplain = async (id, code, errorMsg) => {
+    if ((userData?.tokensUsed || 0) >= 50000) {
+      updateCell(id, { aiResult: "⚠️ **Daily Groq limit completed.** Please wait for it to reset." });
+      return;
+    }
     updateCell(id, { isCorrecting: true });
     try {
       const prompt = `I got an error running this ${codeLabLanguage} code:
@@ -336,6 +340,10 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
 
   const handleAskAI = async (id, code) => {
     if (!code.trim()) return;
+    if ((userData?.tokensUsed || 0) >= 50000) {
+      alert("⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait for this to reset before calling AI features.");
+      return;
+    }
     updateCell(id, { isCorrecting: true });
     try {
       const prompt = `Here is some ${codeLabLanguage} code:
@@ -418,7 +426,10 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
       let aiResultUpdate = undefined;
       const lowerOut = outText.toLowerCase();
       if (lowerOut.includes('error') || lowerOut.includes('traceback') || lowerOut.includes('exception')) {
-        const prompt = `I got an error running this ${lang} code:
+        if ((userData?.tokensUsed || 0) >= 50000) {
+          aiResultUpdate = "⚠️ **Daily Groq limit completed.** Please wait for it to reset.";
+        } else {
+          const prompt = `I got an error running this ${lang} code:
 
 \`\`\`${lang}
 ${code}
@@ -433,9 +444,10 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
 1. You MUST preserve the original function names, variable names, and line-by-line structure as much as possible. Do NOT rename any functions (e.g. keep 'fin' as 'fin', do NOT rename to 'fib' or 'fibonacci') or variables.
 2. Only fix the exact bug causing the error. Do NOT add extra validation checks (such as value errors or negative checks) or rewrite the control flow (e.g., changing 'if' statements to 'elif/else' structures or nesting) unless it is directly causing the error.
 3. Keep the corrected code as close as possible to the original line count so that it can be easily traced line-by-line.`;
-        const aiExp = await processWithGroq(prompt, "explain_code");
-        aiResultUpdate = "⚠️ **Auto-Error Analysis:**\n\n" + aiExp.text;
-        updateUserTokenUsage(aiExp.usage.total_tokens, 0);
+          const aiExp = await processWithGroq(prompt, "explain_code");
+          aiResultUpdate = "⚠️ **Auto-Error Analysis:**\n\n" + aiExp.text;
+          updateUserTokenUsage(aiExp.usage.total_tokens, 0);
+        }
       }
       
       setEntries(prev => prev.map(entry => 
@@ -455,7 +467,14 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
       updateNotebookEntry(currentUser.uid, day || '1', id, { output: outText }).catch(console.error);
       
       // Auto explain error
-      const prompt = `I got an error running this code:
+      if ((userData?.tokensUsed || 0) >= 50000) {
+        const aiResultUpdate = "⚠️ **Daily Groq limit completed.** Please wait for it to reset.";
+        setEntries(prev => prev.map(entry => 
+          entry.id === id ? { ...entry, aiExample: aiResultUpdate } : entry
+        ));
+        updateNotebookEntry(currentUser.uid, day || '1', id, { aiExample: aiResultUpdate }).catch(console.error);
+      } else {
+        const prompt = `I got an error running this code:
 
 \`\`\`
 ${code}
@@ -470,14 +489,15 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
 1. You MUST preserve the original function names, variable names, and line-by-line structure as much as possible. Do NOT rename any functions (e.g. keep 'fin' as 'fin', do NOT rename to 'fib' or 'fibonacci') or variables.
 2. Only fix the exact bug causing the error. Do NOT add extra validation checks (such as value errors or negative checks) or rewrite the control flow (e.g., changing 'if' statements to 'elif/else' structures or nesting) unless it is directly causing the error.
 3. Keep the corrected code as close as possible to the original line count so that it can be easily traced line-by-line.`;
-      processWithGroq(prompt, "explain_code").then(aiExp => {
-        const aiResultUpdate = "⚠️ **Auto-Error Analysis:**\n\n" + aiExp.text;
-        updateUserTokenUsage(aiExp.usage.total_tokens, 0);
-        setEntries(prev => prev.map(entry => 
-          entry.id === id ? { ...entry, aiExample: aiResultUpdate } : entry
-        ));
-        updateNotebookEntry(currentUser.uid, day || '1', id, { aiExample: aiResultUpdate }).catch(console.error);
-      }).catch(console.error);
+        processWithGroq(prompt, "explain_code").then(aiExp => {
+          const aiResultUpdate = "⚠️ **Auto-Error Analysis:**\n\n" + aiExp.text;
+          updateUserTokenUsage(aiExp.usage.total_tokens, 0);
+          setEntries(prev => prev.map(entry => 
+            entry.id === id ? { ...entry, aiExample: aiResultUpdate } : entry
+          ));
+          updateNotebookEntry(currentUser.uid, day || '1', id, { aiExample: aiResultUpdate }).catch(console.error);
+        }).catch(console.error);
+      }
     }
   };
 
@@ -549,6 +569,11 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
   const handlePdfUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if ((userData?.tokensUsed || 0) >= 50000) {
+      alert("⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait for this to reset before calling AI features.");
+      e.target.value = null;
+      return;
+    }
     setIsAnalyzing(true);
     setAnalysisStatus('Parsing PDF document structure...');
     try {
@@ -649,6 +674,12 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
   const handleAddData = async (type, customText = '') => {
     const dataToProcess = customText || inputText;
     if (!dataToProcess && type === 'text') return;
+
+    const isColab = type === 'colab' || dataToProcess.includes('colab.research.google.com');
+    if (!isColab && (userData?.tokensUsed || 0) >= 50000) {
+      alert("⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait for this to reset before calling AI features.");
+      return;
+    }
 
     setIsAnalyzing(true);
     
@@ -826,7 +857,7 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
     const tokenLimit = 50000;
     const currentUsed = userData?.tokensUsed || 0;
     if (currentUsed >= tokenLimit) {
-      alert("⚠️ Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Caching (Storebase) is still active for previously run snippets, but new snippets cannot be analyzed until tomorrow.");
+      alert("⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait for this to reset before calling AI features.");
       setActiveExplanationId(null); // Close modal if blocked
       return;
     }
@@ -864,6 +895,10 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
   };
 
   const handleRegenerateWithFeedback = async (entryId, feedback) => {
+    if ((userData?.tokensUsed || 0) >= 50000) {
+      alert("⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait for this to reset before calling AI features.");
+      return;
+    }
     setEntries(prev => prev.map(entry => 
       entry.id === entryId ? { ...entry, isGeneratingExample: true } : entry
     ));
@@ -1017,6 +1052,11 @@ Please output a corrected step-by-step trace. Follow the exact same formatting r
                         style={{ width: `${Math.min(100, ((userData?.tokensUsed || 0) / 50000) * 100)}%` }}
                       />
                     </div>
+                    {(userData?.tokensUsed || 0) >= 50000 && (
+                      <div className="text-[10px] text-rose-450 text-rose-400 font-bold bg-rose-950/20 border border-rose-900/35 rounded-lg p-2.5 mt-2 leading-snug">
+                        ⚠️ Limit reached! Please wait for it to reset. AI services are temporarily disabled.
+                      </div>
+                    )}
                   </div>
 
                   {/* Savings */}
