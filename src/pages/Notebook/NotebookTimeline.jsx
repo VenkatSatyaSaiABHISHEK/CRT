@@ -256,7 +256,7 @@ const NotebookTimeline = () => {
   };
 
   const handleAutoAIErrorExplain = async (id, code, errorMsg) => {
-    if ((userData?.tokensUsed || 0) >= 50000) {
+    if ((userData?.tokensUsed || 0) >= 100000000) {
       updateCell(id, { aiResult: `⚠️ **Daily Groq limit completed.** Please wait ${getHoursUntilReset()} hours to reset.` });
       return;
     }
@@ -348,8 +348,8 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
 
   const handleAskAI = async (id, code) => {
     if (!code.trim()) return;
-    if ((userData?.tokensUsed || 0) >= 50000) {
-      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+    if ((userData?.tokensUsed || 0) >= 100000000) {
+      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       return;
     }
     updateCell(id, { isCorrecting: true });
@@ -434,7 +434,7 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
       let aiResultUpdate = undefined;
       const lowerOut = outText.toLowerCase();
       if (lowerOut.includes('error') || lowerOut.includes('traceback') || lowerOut.includes('exception')) {
-        if ((userData?.tokensUsed || 0) >= 50000) {
+        if ((userData?.tokensUsed || 0) >= 100000000) {
           aiResultUpdate = `⚠️ **Daily Groq limit completed.** Please wait ${getHoursUntilReset()} hours to reset.`;
         } else {
           const prompt = `I got an error running this ${lang} code:
@@ -475,7 +475,7 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
       updateNotebookEntry(currentUser.uid, day || '1', id, { output: outText }).catch(console.error);
       
       // Auto explain error
-      if ((userData?.tokensUsed || 0) >= 50000) {
+      if ((userData?.tokensUsed || 0) >= 100000000) {
         const aiResultUpdate = `⚠️ **Daily Groq limit completed.** Please wait ${getHoursUntilReset()} hours to reset.`;
         setEntries(prev => prev.map(entry => 
           entry.id === id ? { ...entry, aiExample: aiResultUpdate } : entry
@@ -577,8 +577,8 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
   const handlePdfUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if ((userData?.tokensUsed || 0) >= 50000) {
-      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+    if ((userData?.tokensUsed || 0) >= 100000000) {
+      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       e.target.value = null;
       return;
     }
@@ -608,8 +608,8 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
           }
 
           for (let i = 0; i < chunks.length; i++) {
-            if ((userData?.tokensUsed || 0) >= 50000) {
-              alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours to reset. Remaining chunks skipped.`);
+            if ((userData?.tokensUsed || 0) >= 100000000) {
+              alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours to reset. Remaining chunks skipped.`);
               break;
             }
             setAnalysisStatus(`AI is analyzing PDF chunk ${i + 1} of ${chunks.length}...`);
@@ -688,8 +688,8 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
     if (!dataToProcess && type === 'text') return;
 
     const isColab = type === 'colab' || dataToProcess.includes('colab.research.google.com');
-    if (!isColab && (userData?.tokensUsed || 0) >= 50000) {
-      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+    if (!isColab && (userData?.tokensUsed || 0) >= 100000000) {
+      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       return;
     }
 
@@ -865,10 +865,10 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
       console.error("Cache check failed:", e);
     }
 
-    const tokenLimit = 50000;
+    const tokenLimit = 100000000;
     const currentUsed = userData?.tokensUsed || 0;
     if (currentUsed >= tokenLimit) {
-      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       setActiveExplanationId(null); // Close modal if blocked
       return;
     }
@@ -906,8 +906,8 @@ CRITICAL INSTRUCTION FOR CORRECTED CODE:
   };
 
   const handleRegenerateWithFeedback = async (entryId, feedback) => {
-    if ((userData?.tokensUsed || 0) >= 50000) {
-      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+    if ((userData?.tokensUsed || 0) >= 100000000) {
+      alert(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       return;
     }
     setEntries(prev => prev.map(entry => 
@@ -1008,16 +1008,16 @@ Please output a corrected step-by-step trace. Follow the exact same formatting r
               <div className="flex flex-col text-left">
                 <div className="flex justify-between gap-3 text-[9px] font-black uppercase text-slate-400">
                   <span>Groq Usage</span>
-                  <span className={(userData?.tokensUsed || 0) >= 42500 ? "text-rose-400 animate-pulse font-bold" : (userData?.tokensUsed || 0) >= 30000 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
-                    {(userData?.tokensUsed || 0).toLocaleString()} / 50k
+                  <span className={(userData?.tokensUsed || 0) >= 90000000 ? "text-rose-400 animate-pulse font-bold" : (userData?.tokensUsed || 0) >= 70000000 ? "text-amber-400 font-bold" : "text-emerald-400 font-bold"}>
+                    {(userData?.tokensUsed || 0).toLocaleString()} / 100M
                   </span>
                 </div>
                 <div className="w-20 h-0.5 bg-slate-800 rounded-full overflow-hidden mt-0.5">
                   <div 
                     className={`h-full transition-all duration-500 ${
-                      (userData?.tokensUsed || 0) >= 42500 ? "bg-rose-500" : (userData?.tokensUsed || 0) >= 30000 ? "bg-amber-500" : "bg-emerald-500"
+                      (userData?.tokensUsed || 0) >= 90000000 ? "bg-rose-500" : (userData?.tokensUsed || 0) >= 70000000 ? "bg-amber-500" : "bg-emerald-500"
                     }`}
-                    style={{ width: `${Math.min(100, ((userData?.tokensUsed || 0) / 50000) * 100)}%` }}
+                    style={{ width: `${Math.min(100, ((userData?.tokensUsed || 0) / 100000000) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -1049,21 +1049,21 @@ Please output a corrected step-by-step trace. Follow the exact same formatting r
                   <div className="space-y-1.5 text-left">
                     <div className="flex justify-between text-[11px] text-slate-400 font-bold">
                       <span>Daily Groq Budget</span>
-                      <span>{Math.round(((userData?.tokensUsed || 0) / 50000) * 100)}%</span>
+                      <span>{Math.round(((userData?.tokensUsed || 0) / 100000000) * 100)}%</span>
                     </div>
                     <div className="text-lg font-mono font-bold text-slate-100 flex items-baseline gap-1">
                       <span>{(userData?.tokensUsed || 0).toLocaleString()}</span>
-                      <span className="text-xs text-slate-500 font-normal">/ 50,000 tokens</span>
+                      <span className="text-xs text-slate-500 font-normal">/ 100,000,000 tokens</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-900 border border-slate-850 rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
-                          (userData?.tokensUsed || 0) >= 42500 ? "bg-rose-500 animate-pulse" : (userData?.tokensUsed || 0) >= 30000 ? "bg-amber-500" : "bg-indigo-500"
+                          (userData?.tokensUsed || 0) >= 90000000 ? "bg-rose-500 animate-pulse" : (userData?.tokensUsed || 0) >= 70000000 ? "bg-amber-500" : "bg-indigo-500"
                         }`}
-                        style={{ width: `${Math.min(100, ((userData?.tokensUsed || 0) / 50000) * 100)}%` }}
+                        style={{ width: `${Math.min(100, ((userData?.tokensUsed || 0) / 100000000) * 100)}%` }}
                       />
                     </div>
-                    {(userData?.tokensUsed || 0) >= 50000 && (
+                    {(userData?.tokensUsed || 0) >= 100000000 && (
                       <div className="text-[10px] text-rose-450 text-rose-400 font-bold bg-rose-950/20 border border-rose-900/35 rounded-lg p-2.5 mt-2 leading-snug">
                         ⚠️ Daily Groq limit completed. Please wait {getHoursUntilReset()} hours to reset. AI services are temporarily disabled.
                       </div>

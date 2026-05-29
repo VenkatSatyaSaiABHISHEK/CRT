@@ -11,8 +11,8 @@ export const processWithGroq = async (text, task = "format") => {
       if (snap.exists()) {
         const userData = snap.data();
         const tokensUsed = userData.tokensUsed || 0;
-        if (tokensUsed >= 50000) {
-          throw new Error("Daily Groq token limit reached (50,000 tokens). Please wait for it to reset.");
+        if (tokensUsed >= 100000000) {
+          throw new Error("Daily Groq token limit reached (100,000,000 tokens). Please wait for it to reset.");
         }
       }
     } catch (err) {

@@ -106,7 +106,7 @@ const DemoTry = () => {
       return;
     }
 
-    if (userData && (userData.tokensUsed || 0) >= 50000) {
+    if (userData && (userData.tokensUsed || 0) >= 100000000) {
       const getHoursUntilReset = () => {
         const now = new Date();
         const midnight = new Date();
@@ -114,7 +114,7 @@ const DemoTry = () => {
         const diffMs = midnight.getTime() - now.getTime();
         return Math.ceil(diffMs / (1000 * 60 * 60));
       };
-      setErrorMessage(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 50,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
+      setErrorMessage(`⚠️ Daily Groq Token Limit Reached! You have reached your daily budget of 100,000,000 tokens. Please wait ${getHoursUntilReset()} hours for this to reset.`);
       setShowVisualizer(false);
       return;
     }
