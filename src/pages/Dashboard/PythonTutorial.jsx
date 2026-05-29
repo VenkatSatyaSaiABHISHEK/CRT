@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
   Terminal, 
@@ -12,8 +13,16 @@ import {
   Bookmark,
   CheckCircle,
   Code,
-  HelpCircle
+  Lock,
+  Compass,
+  Trophy,
+  Award,
+  Zap,
+  ChevronRight,
+  Check
 } from 'lucide-react';
+import { auth, db } from '../../config/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 
 const PythonTutorial = () => {
@@ -21,303 +30,927 @@ const PythonTutorial = () => {
   const navigate = useNavigate();
   const accentColor = userData?.accentColor || '#6366f1';
   
-  const [activeTopic, setActiveTopic] = useState('variables');
+  const [completedTopics, setCompletedTopics] = useState(new Set());
+  const [totalXP, setTotalXP] = useState(0);
+  const [activeTopicId, setActiveTopicId] = useState(1);
   const [isRunning, setIsRunning] = useState(false);
   const [hasExecuted, setHasExecuted] = useState(false);
+  const [freePlay, setFreePlay] = useState(false);
+  const [confettiActive, setConfettiActive] = useState(false);
 
-  const topics = {
-    // Basics
-    variables: {
-      name: "Variables & Data Types",
-      category: "basics",
-      desc: "Variables are containers for storing data values. Python has no command for declaring a variable; a variable is created the moment you first assign a value to it.",
-      code: `# Defining different data types in Python
-age = 21          # Integer
-gpa = 3.85         # Float
-name = "Sriram"    # String
-is_student = True  # Boolean
+  // Grouped by Phase
+  const phases = [
+    {
+      id: 1,
+      name: "Phase 1: Python Basics",
+      topics: [
+        {
+          id: 1,
+          name: "Introduction to Python",
+          desc: "Learn what Python is, its key features, common applications, and how to set up your programming IDE workspace.",
+          code: `# Python is an interpreted, high-level programming language.
+# Let's verify our setup by printing a hello message:
+print("Welcome to Python, Abhishek!")
+print("Vite Dev Server sandbox is running.")`,
+          output: "Welcome to Python, Abhishek!\nVite Dev Server sandbox is running."
+        },
+        {
+          id: 2,
+          name: "Python Syntax",
+          desc: "Understand print statements, comments, variables, and Python's critical indentation rules for nesting blocks.",
+          code: `# Indentation defines blocks of code in Python
+name = "Abhi"
+if True:
+    print(f"Indentation matches: Hello {name}")`,
+          output: "Indentation matches: Hello Abhi"
+        },
+        {
+          id: 3,
+          name: "Data Types",
+          desc: "Discover Python's fundamental data types: Integer (int), Float, String (str), Boolean (bool), and Complex numbers.",
+          code: `x = 10         # Integer
+y = 10.5       # Float
+name = "Abhi"  # String
+is_student = True # Boolean
+c = 2 + 3j     # Complex
 
-print(f"Name: {name}, Age: {age}")
-print(f"GPA: {gpa}, Student Status: {is_student}")
-print(f"Types: age is {type(age).__name__}, name is {type(name).__name__}")`,
-      output: `Name: Sriram, Age: 21
-GPA: 3.85, Student Status: True
-Types: age is int, name is str`
+print(f"x is {type(x).__name__}, y is {type(y).__name__}")
+print(f"name is {type(name).__name__}, is_student is {type(is_student).__name__}")
+print(f"c is {type(c).__name__} with real part {c.real}")`,
+          output: "x is int, y is float\nname is str, is_student is bool\nc is complex with real part 2.0"
+        },
+        {
+          id: 4,
+          name: "Input and Output",
+          desc: "Master reading string inputs from users using the input() function and writing outputs to standard output.",
+          code: `# Simulating input value "Abhi"
+username = "Abhi" # input("Enter Name: ")
+print(f"Hello, {username}! Welcome to your dashboard.")`,
+          output: "Hello, Abhi! Welcome to your dashboard."
+        },
+        {
+          id: 5,
+          name: "Type Conversion",
+          desc: "Learn casting variables from one data type to another using constructor functions like int(), float(), and str().",
+          code: `age_str = "20"
+# Convert string to integer for calculation
+age = int(age_str)
+next_year = age + 1
+
+print(f"Converted {type(age_str).__name__} to {type(age).__name__}")
+print(f"Calculated Age Next Year: {next_year}")`,
+          output: "Converted str to int\nCalculated Age Next Year: 21"
+        },
+        {
+          id: 6,
+          name: "Operators",
+          desc: "Use arithmetic operators (+, -, *, /, %, **, //), logical operators (and, or, not), and comparison operators.",
+          code: `x = 15
+y = 4
+
+print("Arithmetic: 15 // 4 = ", x // y) # Floor division
+print("Comparison: 15 != 4 ->", x != y)
+print("Logical: (15 > 4) and (4 > 0) ->", (x > y) and (y > 0))`,
+          output: "Arithmetic: 15 // 4 =  3\nComparison: 15 != 4 -> True\nLogical: (15 > 4) and (4 > 0) -> True"
+        }
+      ]
     },
-    operators: {
-      name: "Operators & Expressions",
-      category: "basics",
-      desc: "Operators are used to perform operations on variables and values. Python divides operators into arithmetic, comparison, logical, and identity expressions.",
-      code: `a = 15
-b = 4
+    {
+      id: 2,
+      name: "Phase 2: Decision Making",
+      topics: [
+        {
+          id: 7,
+          name: "if Statement",
+          desc: "Control program execution using 'if' statements to run block sections only if conditions hold True.",
+          code: `age = 18
 
-# Arithmetic operations
-sum_val = a + b
-mod_val = a % b
-floor_div = a // b
+if age >= 18:
+    print("Condition met: Adult")`,
+          output: "Condition met: Adult"
+        },
+        {
+          id: 8,
+          name: "if else Statement",
+          desc: "Provide alternative program paths with 'else' blocks when the 'if' logical condition evaluates to False.",
+          code: `age = 16
 
-# Logical comparison
-is_greater = (a > b) and (b > 0)
-
-print(f"15 + 4 = {sum_val}")
-print(f"15 % 4 = {mod_val}")
-print(f"15 // 4 = {floor_div}")
-print(f"Is 15 > 4 and 4 > 0? {is_greater}")`,
-      output: `15 + 4 = 19
-15 % 4 = 3
-15 // 4 = 3
-Is 15 > 4 and 4 > 0? True`
-    },
-    conditionals: {
-      name: "Conditionals (if-else)",
-      category: "basics",
-      desc: "Conditionals check logic expressions and branch program flow. Python uses if, elif, and else statements accompanied by colon block indentations.",
-      code: `score = 85
-
-if score >= 90:
-    grade = 'A'
-elif score >= 80:
-    grade = 'B'
-elif score >= 70:
-    grade = 'C'
+if age >= 18:
+    print("Adult")
 else:
-    grade = 'F'
+    print("Minor")`,
+          output: "Minor"
+        },
+        {
+          id: 9,
+          name: "if elif else Statement",
+          desc: "Chain multiple conditional expressions sequentially using 'elif' before ending with a fallback 'else' block.",
+          code: `marks = 85
 
-print(f"Score: {score}, Grade assigned: {grade}")`,
-      output: `Score: 85, Grade assigned: B`
+if marks >= 90:
+    print("Grade: A")
+elif marks >= 80:
+    print("Grade: B")
+else:
+    print("Grade: C")`,
+          output: "Grade: B"
+        }
+      ]
     },
-    loops: {
-      name: "Loops & Iterations",
-      category: "basics",
-      desc: "Loops allow code blocks to execute repeatedly. Python supports 'while' loops (executes as long as a condition holds) and 'for' loops (iterates over elements of a sequence).",
-      code: `print("--- For Loop (range) ---")
-for i in range(1, 4):
-    print(f"Iteration {i}")
-    
-print("\\n--- While Loop ---")
-count = 3
-while count > 0:
-    print(f"Countdown: {count}")
-    count -= 1`,
-      output: `--- For Loop (range) ---
-Iteration 1
-Iteration 2
-Iteration 3
-
---- While Loop ---
-Countdown: 3
-Countdown: 2
-Countdown: 1`
+    {
+      id: 3,
+      name: "Phase 3: Loops",
+      topics: [
+        {
+          id: 10,
+          name: "for Loop",
+          desc: "Iterate over a sequence or number range dynamically using the index loop 'for' statement.",
+          code: `print("Looping through range(3):")
+for i in range(3):
+    print(f"Index: {i}")`,
+          output: "Looping through range(3):\nIndex: 0\nIndex: 1\nIndex: 2"
+        },
+        {
+          id: 11,
+          name: "while Loop",
+          desc: "Execute a block of code repeatedly as long as a specified logical condition remains True.",
+          code: `i = 1
+while i <= 3:
+    print(f"Count: {i}")
+    i += 1`,
+          output: "Count: 1\nCount: 2\nCount: 3"
+        },
+        {
+          id: 12,
+          name: "Nested Loops",
+          desc: "Place loops inside loops to iterate multi-dimensional datasets or construct coordinate pairs.",
+          code: `for i in range(2):
+    for j in range(2):
+        print(f"Grid: i={i}, j={j}")`,
+          output: "Grid: i={0}, j={0}\nGrid: i={0}, j={1}\nGrid: i={1}, j={0}\nGrid: i={1}, j={1}"
+        },
+        {
+          id: 13,
+          name: "Loop Control",
+          desc: "Modify standard loop flow dynamically using break (terminates loop), continue (skips step), or pass (placeholder).",
+          code: `for num in range(1, 6):
+    if num == 3:
+        continue # Skip 3
+    if num == 5:
+        break # Exit at 5
+    print(f"Number: {num}")`,
+          output: "Number: 1\nNumber: 2\nNumber: 4"
+        }
+      ]
     },
-    functions: {
-      name: "Functions & Scope",
-      category: "basics",
-      desc: "A function is a reusable block of code defined with the def keyword. Functions can accept parameters and return values using the return statement.",
-      code: `def greet_user(username, greeting="Hello"):
-    # local variable scope
-    message = f"{greeting}, {username}!"
-    return message
-
-result = greet_user("Abhishek", "Welcome")
-print(result)
-
-default_result = greet_user("Sriram")
-print(default_result)`,
-      output: `Welcome, Abhishek!
-Hello, Sriram!`
+    {
+      id: 4,
+      name: "Phase 4: Strings",
+      topics: [
+        {
+          id: 14,
+          name: "String Basics",
+          desc: "Manipulate text data. Master index mapping, string slicing [start:end], build-in methods, and f-strings.",
+          code: `name = "Python"
+print("Indexing: name[0] ->", name[0])
+print("Slicing: name[1:4] ->", name[1:4])
+print("Uppercase:", name.upper())
+print(f"Formatting: Welcome to {name}!")`,
+          output: "Indexing: name[0] -> P\nSlicing: name[1:4] -> yth\nUppercase: PYTHON\nFormatting: Welcome to Python!"
+        }
+      ]
     },
+    {
+      id: 5,
+      name: "Phase 5: Collections",
+      topics: [
+        {
+          id: 15,
+          name: "Lists",
+          desc: "Lists are ordered, mutable collection sequences that allow duplicate values. Use append(), pop(), sort(), etc.",
+          code: `numbers = [30, 10, 20]
+numbers.append(40)
+numbers.sort()
+print("List sorted:", numbers)
+print("Popped item:", numbers.pop())
+print("Modified List:", numbers)`,
+          output: "List sorted: [10, 20, 30, 40]\nPopped item: 40\nModified List: [10, 20, 30]"
+        },
+        {
+          id: 16,
+          name: "Tuples",
+          desc: "Tuples are ordered, immutable collection sequences. Once created, their elements cannot be modified or replaced.",
+          code: `data = (10, 20, 30)
+print("Tuple data:", data)
+print("First item:", data[0])
+# data[0] = 50 -> This would throw a TypeError`,
+          output: "Tuple data: (10, 20, 30)\nFirst item: 10"
+        },
+        {
+          id: 17,
+          name: "Sets",
+          desc: "Sets are unordered collections of unique elements. Useful for union() and intersection() mathematics.",
+          code: `s1 = {1, 2, 3}
+s2 = {3, 4, 5}
+s1.add(6)
 
-    // Intermediate
-    collections: {
-      name: "Collections (List/Tuple/Dict)",
-      category: "intermediate",
-      desc: "Python collections store batches of elements: Lists (ordered, mutable, duplicates), Tuples (ordered, immutable), and Dictionaries (unordered key-value pairs).",
-      code: `# List (mutable)
-fruits = ["apple", "banana"]
-fruits.append("cherry")
+print("Union:", s1.union(s2))
+print("Intersection:", s1.intersection(s2))`,
+          output: "Union: {1, 2, 3, 4, 5, 6}\nIntersection: {3}"
+        },
+        {
+          id: 18,
+          name: "Dictionaries",
+          desc: "Dictionaries store elements as key-value pairs. Fetch values using keys, get(), and update() fields.",
+          code: `student = {"name": "Abhi", "age": 20}
+student.update({"gpa": 3.9})
 
-# Tuple (immutable)
-coordinates = (10, 20)
-
-# Dictionary (key-value mapping)
-student = {"name": "Sriram", "gpa": 3.9}
-
-print("Fruits list:", fruits)
-print("Coordinates tuple:", coordinates)
-print("Student name:", student["name"], "with GPA:", student["gpa"])`,
-      output: `Fruits list: ['apple', 'banana', 'cherry']
-Coordinates tuple: (10, 20)
-Student name: Sriram with GPA: 3.9`
+print("Keys:", list(student.keys()))
+print("Values:", list(student.values()))
+print("GPA fetched via get():", student.get("gpa"))`,
+          output: "Keys: ['name', 'age', 'gpa']\nValues: ['Abhi', 20, 3.9]\nGPA fetched via get(): 3.9"
+        }
+      ]
     },
-    strings: {
-      name: "String Manipulation",
-      category: "intermediate",
-      desc: "Strings are immutable sequences of characters. Python has numerous built-in string methods to slice, split, join, strip, and format text arrays.",
-      code: `phrase = "  Python is awesome!  "
+    {
+      id: 6,
+      name: "Phase 6: Functions",
+      topics: [
+        {
+          id: 19,
+          name: "Functions Basics",
+          desc: "Create modular code blocks using the 'def' statement. Send data using parameters and fetch results with return.",
+          code: `def greet(user):
+    return f"Hello, {user}!"
 
-# Slicing, stripping whitespace, and formatting
-clean_phrase = phrase.strip()
-words = clean_phrase.split(" ")
-reversed_words = "-".join(reversed(words))
+print(greet("Abhi"))`,
+          output: "Hello, Abhi!"
+        },
+        {
+          id: 20,
+          name: "Types of Functions",
+          desc: "Explore argument passing methods, default values, lambda functions, and recursive function structures.",
+          code: `# Lambda (anonymous) function
+square = lambda x: x * x
 
-print(f"Original: '{phrase}'")
-print(f"Cleaned: '{clean_phrase}'")
-print(f"Sliced [0:6]: '{clean_phrase[0:6]}'")
-print(f"Joined words reversed: '{reversed_words}'")`,
-      output: `Original: '  Python is awesome!  '
-Cleaned: 'Python is awesome!'
-Sliced [0:6]: 'Python'
-Joined words reversed: 'awesome!-is-Python'`
+# Recursive function
+def factorial(n):
+    return 1 if n == 1 else n * factorial(n - 1)
+
+print("Lambda square(5) ->", square(5))
+print("Recursive factorial(4) ->", factorial(4))`,
+          output: "Lambda square(5) -> 25\nRecursive factorial(4) -> 24"
+        }
+      ]
     },
-    comprehensions: {
-      name: "List Comprehensions",
-      category: "intermediate",
-      desc: "List comprehensions offer a shorter syntax to create new lists based on values of existing lists in a single, readable line of code.",
-      code: `numbers = [1, 2, 3, 4, 5]
+    {
+      id: 7,
+      name: "Phase 7: Modules",
+      topics: [
+        {
+          id: 21,
+          name: "Modules",
+          desc: "Import external Python source files or built-in libraries (like math, random, datetime, os) to extend functions.",
+          code: `import math
+import random
 
-# Create list of squares for even numbers only
-even_squares = [x**2 for x in numbers if x % 2 == 0]
-
-# Converting values to strings
-string_nums = [f"Num: {x}" for x in numbers]
-
-print("Original list:", numbers)
-print("Even squares list:", even_squares)
-print("String representation:", string_nums)`,
-      output: `Original list: [1, 2, 3, 4, 5]
-Even squares list: [4, 16]
-String representation: ['Num: 1', 'Num: 2', 'Num: 3', 'Num: 4', 'Num: 5']`
+print("Square root of 64:", math.sqrt(64))
+# Pick a static random value from range
+print("Random pick from range [1-10]:", random.randint(1, 10))`,
+          output: "Square root of 64: 8.0\nRandom pick from range [1-10]: 7"
+        },
+        {
+          id: 22,
+          name: "Packages",
+          desc: "Packages are namespaces containing multiple modules. Import specific tools using the 'from ... import ...' syntax.",
+          code: `from math import pi, sin
+print(f"Value of pi: {pi:.4f}")
+print(f"sin(pi/2): {sin(pi/2)}")`,
+          output: "Value of pi: 3.1416\nsin(pi/2): 1.0"
+        }
+      ]
     },
-    exceptions: {
-      name: "Exception Handling",
-      category: "intermediate",
-      desc: "Exceptions are runtime errors. You can handle them gracefully using try, except, finally blocks to keep the application running when errors arise.",
-      code: `def safe_division(numerator, denominator):
-    try:
-        result = numerator / denominator
-        print(f"Result: {result}")
-    except ZeroDivisionError as err:
-        print(f"Error division failed: {err}")
-    finally:
-        print("Division execution frame finished.")
-
-print("--- Valid Division ---")
-safe_division(10, 2)
-
-print("\\n--- Zero Division Error ---")
-safe_division(10, 0)`,
-      output: `--- Valid Division ---
-Result: 5.0
-Division execution frame finished.
-
---- Zero Division Error ---
-Error division failed: division by zero
-Division execution frame finished.`
+    {
+      id: 8,
+      name: "Phase 8: Exception Handling",
+      topics: [
+        {
+          id: 23,
+          name: "Errors & Exceptions",
+          desc: "Handle runtime faults gracefully using try-except blocks. Prevent code from crashing and run cleanups with finally.",
+          code: `try:
+    result = 10 / 0
+except ZeroDivisionError as err:
+    print("Caught Exception:", err)
+finally:
+    print("Cleanup step executed.")`,
+          output: "Caught Exception: division by zero\nCleanup step executed."
+        }
+      ]
     },
+    {
+      id: 9,
+      name: "Phase 9: File Handling",
+      topics: [
+        {
+          id: 24,
+          name: "Reading Files",
+          desc: "Open and read content of text documents in Python using built-in file open streams.",
+          code: `# Simulating opening a file and reading lines
+# file = open("data.txt", "r")
+file_content = "Abhi, 20\\nSriram, 21\\n"
+print("File content read:\\n" + file_content)`,
+          output: "File content read:\nAbhi, 20\nSriram, 21\n"
+        },
+        {
+          id: 25,
+          name: "Writing Files",
+          desc: "Write new strings or append data to existing logs using write Mode ('w') and append Mode ('a').",
+          code: `# Simulating writing data to disk
+# file = open("output.txt", "w")
+# file.write("Writing new dataset.")
+print("File write completed successfully: output.txt created.")`,
+          output: "File write completed successfully: output.txt created."
+        }
+      ]
+    },
+    {
+      id: 10,
+      name: "Phase 10: OOP basics",
+      topics: [
+        {
+          id: 26,
+          name: "Class",
+          desc: "Define custom classes in Python as blueprints. Classes hold definitions for attributes and methods.",
+          code: `class Student:
+    pass # Empty blueprint
 
-    // Advanced
-    oop: {
-      name: "OOP & Classes",
-      category: "advanced",
-      desc: "Object-Oriented Programming models real-world entities. Classes act as blueprints with fields (properties) and methods (member functions) instantiated into Objects.",
-      code: `class Student:
-    def __init__(self, name, gpa):
+print("Class created:", Student.__name__)`,
+          output: "Class created: Student"
+        },
+        {
+          id: 27,
+          name: "Object",
+          desc: "Instantiate concrete objects from classes. Objects represent individual instances of class models.",
+          code: `class Student:
+    pass
+
+s1 = Student()
+print("Object instantiated:", s1)`,
+          output: "Object instantiated: <__main__.Student object>"
+        },
+        {
+          id: 28,
+          name: "Constructor",
+          desc: "Use the constructor __init__() method to initialize object state attributes on instantiation.",
+          code: `class Student:
+    def __init__(self, name):
         self.name = name
-        self.gpa = gpa
-        
-    def display_info(self):
-        return f"Student {self.name} has a {self.gpa} GPA."
-        
-# Instantiating objects
-s1 = Student("Sriram", 3.95)
-s2 = Student("Abhishek", 3.82)
 
-print(s1.display_info())
-print(s2.display_info())`,
-      output: `Student Sriram has a 3.95 GPA.
-Student Abhishek has a 3.82 GPA.`
+s = Student("Abhi")
+print("Student initialized name:", s.name)`,
+          output: "Student initialized name: Abhi"
+        },
+        {
+          id: 29,
+          name: "Inheritance",
+          desc: "Inherit attributes and methods from parent classes to child classes to encourage code reusability.",
+          code: `class Parent:
+    def greet(self):
+        return "Greeting from parent"
+
+class Child(Parent):
+    pass
+
+c = Child()
+print("Inherited method output:", c.greet())`,
+          output: "Inherited method output: Greeting from parent"
+        },
+        {
+          id: 30,
+          name: "Polymorphism",
+          desc: "Use polymorphism to define methods with same signatures but different implementations across objects.",
+          code: `class Dog:
+    def speak(self): return "Woof!"
+class Cat:
+    def speak(self): return "Meow!"
+
+animals = [Dog(), Cat()]
+for animal in animals:
+    print(animal.speak())`,
+          output: "Woof!\nMeow!"
+        },
+        {
+          id: 31,
+          name: "Encapsulation",
+          desc: "Restrict access to class members by adding double underscores prefix for private variables.",
+          code: `class Account:
+    def __init__(self, balance):
+        self.__balance = balance # Private variable
+
+acc = Account(1000)
+# print(acc.__balance) -> Throws Attribute Error!
+print("Private variable protected inside scope.")`,
+          output: "Private variable protected inside scope."
+        },
+        {
+          id: 32,
+          name: "Abstraction",
+          desc: "Hide complex details and only show essential features using abstract classes (abc module).",
+          code: `from abc import ABC, abstractmethod
+class Vehicle(ABC):
+    @abstractmethod
+    def start(self): pass
+
+class Car(Vehicle):
+    def start(self): return "Engine started."
+
+print(Car().start())`,
+          output: "Engine started."
+        }
+      ]
     },
-    recursion: {
-      name: "Recursion Functions",
-      category: "advanced",
-      desc: "Recursion is when a function calls itself to solve smaller subproblems of the same type. It always requires a base case to terminate execution.",
-      code: `def factorial(n):
-    if n == 1:
-        return 1
-    else:
-        return n * factorial(n - 1)
-        
-print(f"5! = {factorial(5)}")
-print(f"3! = {factorial(3)}")`,
-      output: `5! = 120
-3! = 6`
-    },
-    decorators: {
-      name: "Decorators Pattern",
-      category: "advanced",
-      desc: "Decorators wrap functions to modify or extend their behavior dynamically. They are defined using functions returning functions, applied via the @ syntax.",
-      code: `def log_decorator(func):
-    def wrapper(*args, **kwargs):
-        print(f"[LOG] Executing function: {func.__name__}")
-        result = func(*args, **kwargs)
-        print("[LOG] Execution completed.")
-        return result
+    {
+      id: 11,
+      name: "Phase 11: Advanced Python",
+      topics: [
+        {
+          id: 33,
+          name: "List Comprehension",
+          desc: "Generate lists concisely from range logic in a single line. Squares, conditional odds, etc.",
+          code: `squares = [x*x for x in range(5)]
+print("Squares of range(5):", squares)`,
+          output: "Squares of range(5): [0, 1, 4, 9, 16]"
+        },
+        {
+          id: 34,
+          name: "Lambda Functions",
+          desc: "Define single expression anonymous inline functions dynamically.",
+          code: `double = lambda x: x * 2
+print("Double value of 8 is:", double(8))`,
+          output: "Double value of 8 is: 16"
+        },
+        {
+          id: 35,
+          name: "map() function",
+          desc: "Apply mapping functions over all elements in iterables using the map() constructor.",
+          code: `nums = [1, 2, 3]
+doubled = list(map(lambda x: x*2, nums))
+print("Doubled elements:", doubled)`,
+          output: "Doubled elements: [2, 4, 6]"
+        },
+        {
+          id: 36,
+          name: "filter() function",
+          desc: "Filter elements from iterables based on conditional logic using the filter() constructor.",
+          code: `nums = [1, 2, 3, 4]
+odds = list(filter(lambda x: x % 2 != 0, nums))
+print("Odd elements:", odds)`,
+          output: "Odd elements: [1, 3]"
+        },
+        {
+          id: 37,
+          name: "reduce() function",
+          desc: "Accumulate elements iteratively to output a single value using functools.reduce().",
+          code: `from functools import reduce
+nums = [1, 2, 3, 4]
+sum_all = reduce(lambda x, y: x + y, nums)
+print("Accumulated sum of elements:", sum_all)`,
+          output: "Accumulated sum of elements: 10"
+        },
+        {
+          id: 38,
+          name: "Generators",
+          desc: "Yield elements sequentially on demand without loading everything in memory.",
+          code: `def number_generator():
+    yield 1
+    yield 2
+
+for val in number_generator():
+    print("Yielded:", val)`,
+          output: "Yielded: 1\nYielded: 2"
+        },
+        {
+          id: 39,
+          name: "Decorators",
+          desc: "Extend base behavior of existing functions dynamically using wrappers.",
+          code: `def decorator(func):
+    def wrapper():
+        print("Logged start.")
+        func()
     return wrapper
 
-@log_decorator
-def add_numbers(x, y):
-    return x + y
+@decorator
+def say_hello(): print("Hello!")
 
-ans = add_numbers(7, 8)
-print(f"Answer: {ans}")`,
-      output: `[LOG] Executing function: add_numbers
-[LOG] Execution completed.
-Answer: 15`
+say_hello()`,
+          output: "Logged start.\nHello!"
+        },
+        {
+          id: 40,
+          name: "Iterators",
+          desc: "Create custom iterators containing __iter__() and __next__() loops.",
+          code: `items = [10, 20]
+it = iter(items)
+print(next(it))
+print(next(it))`,
+          output: "10\n20"
+        }
+      ]
     },
-    generators: {
-      name: "Generators (yield)",
-      category: "advanced",
-      desc: "Generators return iterators lazily using the yield keyword. Unlike normal functions, they pause execution and save state between elements, conserving memory.",
-      code: `def countdown_generator(num):
-    while num > 0:
-        yield num
-        num -= 1
-        
-# Iterate over generator yield values
-print("Counting down:")
-for count in countdown_generator(3):
-    print(count)`,
-      output: `Counting down:
-3
-2
-1`
+    {
+      id: 12,
+      name: "Phase 12: Data Structures",
+      topics: [
+        {
+          id: 41,
+          name: "Stack",
+          desc: "Implement Last-In-First-Out (LIFO) stacks using lists (append & pop).",
+          code: `stack = []
+stack.append('A')
+stack.append('B')
+print("Stack state:", stack)
+print("Popped:", stack.pop())`,
+          output: "Stack state: ['A', 'B']\nPopped: B"
+        },
+        {
+          id: 42,
+          name: "Queue",
+          desc: "Implement First-In-First-Out (FIFO) queues using collections.deque.",
+          code: `from collections import deque
+queue = deque(['A', 'B'])
+queue.append('C')
+print("Queue state:", list(queue))
+print("Dequeued:", queue.popleft())`,
+          output: "Queue state: ['A', 'B', 'C']\nDequeued: A"
+        },
+        {
+          id: 43,
+          name: "Linked List",
+          desc: "Create dynamic linked list chains of nodes linked together via pointers.",
+          code: `class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+
+head = Node("A")
+head.next = Node("B")
+print(f"Chain: {head.data} -> {head.next.data}")`,
+          output: "Chain: A -> B"
+        },
+        {
+          id: 44,
+          name: "Tree",
+          desc: "Model hierarchical structures using nodes holding left and right children.",
+          code: `class TreeNode:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+root = TreeNode("Root")
+root.left = TreeNode("Left Child")
+print(f"Root: {root.val}, Left: {root.left.val}")`,
+          output: "Root: Root, Left: Left Child"
+        },
+        {
+          id: 45,
+          name: "Graph",
+          desc: "Build relational vertex graphs mapped inside adjacency dict arrays.",
+          code: `graph = {
+    'A': ['B', 'C'],
+    'B': ['A']
+}
+print("Vertices connected to A:", graph['A'])`,
+          output: "Vertices connected to A: ['B', 'C']"
+        },
+        {
+          id: 46,
+          name: "Searching Algorithms",
+          desc: "Perform searches: Linear Search (O(N)) and Binary Search (O(log N)).",
+          code: `arr = [1, 3, 5, 7]
+# Linear search for 5
+found = [idx for idx, val in enumerate(arr) if val == 5]
+print("Item 5 found at index:", found[0])`,
+          output: "Item 5 found at index: 2"
+        },
+        {
+          id: 47,
+          name: "Sorting Algorithms",
+          desc: "Understand sorting algorithms: Bubble, Selection, Insertion, Merge, Quick Sort.",
+          code: `arr = [5, 2, 9, 1]
+# Simulated QuickSort/BuiltinSort
+arr.sort()
+print("Sorted Array:", arr)`,
+          output: "Sorted Array: [1, 2, 5, 9]"
+        }
+      ]
     },
-    lambdas: {
-      name: "Lambdas, Map & Filter",
-      category: "advanced",
-      desc: "Lambda functions are single-expression anonymous functions. They are commonly passed as arguments to map() (applies to all elements) or filter() (selects matching elements).",
-      code: `numbers = [1, 2, 3, 4, 5]
-
-# Lambda for doubling
-double = lambda x: x * 2
-
-# Map: apply double to all elements
-doubled_list = list(map(double, numbers))
-
-# Filter: keep only odd numbers
-odd_list = list(filter(lambda x: x % 2 != 0, numbers))
-
-print("Doubled elements:", doubled_list)
-print("Odds elements:", odd_list)`,
-      output: `Doubled elements: [2, 4, 6, 8, 10]
-Odds elements: [1, 3, 5]`
+    {
+      id: 13,
+      name: "Phase 13: Libraries",
+      topics: [
+        {
+          id: 48,
+          name: "NumPy",
+          desc: "Process multidimensional arrays efficiently with high-speed matrix functions.",
+          code: `# Importing NumPy (simulated array creation)
+arr = [1, 2, 3, 4]
+print("NumPy Array elements:", arr)
+print("Array mean calculation: 2.5")`,
+          output: "NumPy Array elements: [1, 2, 3, 4]\nArray mean calculation: 2.5"
+        },
+        {
+          id: 49,
+          name: "Pandas",
+          desc: "Utilize DataFrames and Series structures to read and filter datasets.",
+          code: `# Simulated Pandas DataFrame mapping
+data = {"Name": ["Abhi", "Sriram"], "Score": [95, 90]}
+print("DataFrame columns:", list(data.keys()))
+print("Row 0 Name:", data["Name"][0])`,
+          output: "DataFrame columns: ['Name', 'Score']\nRow 0 Name: Abhi"
+        },
+        {
+          id: 50,
+          name: "Matplotlib",
+          desc: "Construct visual bar, line, scatter charts dynamically.",
+          code: `print("Matplotlib canvas initialization completed.")
+print("Line plot created: [1, 2, 3] vs [10, 20, 30].")`,
+          output: "Matplotlib canvas initialization completed.\nLine plot created: [1, 2, 3] vs [10, 20, 30]."
+        },
+        {
+          id: 51,
+          name: "Seaborn",
+          desc: "Create statistical charts with beautiful pre-configured theme colors.",
+          code: `print("Seaborn statistical plot theme applied successfully.")
+print("Heatmap generation triggered.")`,
+          output: "Seaborn statistical plot theme applied successfully.\nHeatmap generation triggered."
+        },
+        {
+          id: 52,
+          name: "OpenCV",
+          desc: "Perform computer vision image manipulations, filters, and detections.",
+          code: `print("OpenCV cv2 engine initialized.")
+print("Resizing image structure to 224x224 shape.")`,
+          output: "OpenCV cv2 engine initialized.\nResizing image structure to 224x224 shape."
+        }
+      ]
+    },
+    {
+      id: 14,
+      name: "Phase 14: Databases",
+      topics: [
+        {
+          id: 53,
+          name: "SQLite",
+          desc: "Connect and execute SQL queries inside local relational file databases.",
+          code: `# SQLite connection simulation
+print("Database connected: app.db")
+print("Executing: CREATE TABLE users(name TEXT, age INT);")`,
+          output: "Database connected: app.db\nExecuting: CREATE TABLE users(name TEXT, age INT);"
+        },
+        {
+          id: 54,
+          name: "MySQL",
+          desc: "Connect MySQL servers, execute INSERT, SELECT, and UPDATE queries.",
+          code: `# MySQL query execute simulation
+print("Connected to MySQL Host: localhost")
+print("Executing: SELECT * FROM students WHERE name='Abhi';")`,
+          output: "Connected to MySQL Host: localhost\nExecuting: SELECT * FROM students WHERE name='Abhi';"
+        }
+      ]
+    },
+    {
+      id: 15,
+      name: "Phase 15: Web Development",
+      topics: [
+        {
+          id: 55,
+          name: "Flask",
+          desc: "Develop lightweight web applications, template rendering, and APIs.",
+          code: `# Flask server route simulation
+print("Flask server running on http://127.0.0.1:5000/")
+print("Routing match: @app.route('/') -> serves home.html")`,
+          output: "Flask server running on http://127.0.0.1:5000/\nRouting match: @app.route('/') -> serves home.html"
+        },
+        {
+          id: 56,
+          name: "Django",
+          desc: "Build secure MVT pattern web frameworks with databases and admin panels.",
+          code: `# Django server start simulation
+print("Django setting configuration loaded.")
+print("Starting development server at http://127.0.0.1:8000/")`,
+          output: "Django setting configuration loaded.\nStarting development server at http://127.0.0.1:8000/"
+        }
+      ]
+    },
+    {
+      id: 16,
+      name: "Phase 16: APIs",
+      topics: [
+        {
+          id: 57,
+          name: "REST API",
+          desc: "Understand HTTP methods (GET, POST, PUT, DELETE) and endpoints mapping.",
+          code: `# REST GET API simulation
+print("GET /api/v1/students/Abhi status: 200 OK")
+print("Response: {'id': 1, 'name': 'Abhi'}")`,
+          output: "GET /api/v1/students/Abhi status: 200 OK\nResponse: {'id': 1, 'name': 'Abhi'}"
+        },
+        {
+          id: 58,
+          name: "JSON",
+          desc: "Serialize and deserialize data payloads using json.dumps() and json.loads().",
+          code: `import json
+data_dict = {"name": "Abhi", "age": 20}
+json_str = json.dumps(data_dict)
+print("Serialized JSON String:", json_str)`,
+          output: "Serialized JSON String: {\"name\": \"Abhi\", \"age\": 20}"
+        },
+        {
+          id: 59,
+          name: "Requests Module",
+          desc: "Send network HTTP requests to fetch or submit data from third-party hosts.",
+          code: `# requests.get("https://api.github.com/users/Abhi")
+print("HTTP GET request initiated.")
+print("Response Status Code: 200 OK")`,
+          output: "HTTP GET request initiated.\nResponse Status Code: 200 OK"
+        }
+      ]
+    },
+    {
+      id: 17,
+      name: "Phase 17: Automation",
+      topics: [
+        {
+          id: 60,
+          name: "Selenium",
+          desc: "Automate browser interactions, fill forms, and click elements programmatically.",
+          code: `# driver = webdriver.Chrome()
+print("WebDriver connection initialized.")
+print("Navigating to: https://google.com")`,
+          output: "WebDriver connection initialized.\nNavigating to: https://google.com"
+        },
+        {
+          id: 61,
+          name: "Web Scraping",
+          desc: "Parse website HTML elements using BeautifulSoup and extract target details.",
+          code: `# soup = BeautifulSoup(html_doc, 'html.parser')
+print("BeautifulSoup parsing initialized.")
+print("Found title element tag: <title>LearnLoop</title>")`,
+          output: "BeautifulSoup parsing initialized.\nFound title element tag: <title>LearnLoop</title>"
+        }
+      ]
+    },
+    {
+      id: 18,
+      name: "Phase 18: Data Science",
+      topics: [
+        {
+          id: 62,
+          name: "NumPy & Pandas Dataframes",
+          desc: "Manipulate and inspect tabular data structures inside Pandas DataFrames.",
+          code: `print("Inspecting dataframe shape: (1000, 5)")
+print("Columns: ['age', 'gpa', 'enrolled', 'scores', 'name']")`,
+          output: "Inspecting dataframe shape: (1000, 5)\nColumns: ['age', 'gpa', 'enrolled', 'scores', 'name']"
+        },
+        {
+          id: 63,
+          name: "Data Cleaning",
+          desc: "Handle missing null cells, drop duplicates, and align types in datasets.",
+          code: `print("Checking null fields count: age: 0, scores: 12")
+print("Executing: df['scores'].fillna(df['scores'].mean())")`,
+          output: "Checking null fields count: age: 0, scores: 12\nExecuting: df['scores'].fillna(df['scores'].mean())"
+        },
+        {
+          id: 64,
+          name: "Data Visualization",
+          desc: "Plot statistical datasets to find correlations and distributions.",
+          code: `print("Plotting correlation matrix heatmap.")
+print("Heatmap columns aligned: scores, age, gpa")`,
+          output: "Plotting correlation matrix heatmap.\nHeatmap columns aligned: scores, age, gpa"
+        }
+      ]
+    },
+    {
+      id: 19,
+      name: "Phase 19: Machine Learning",
+      topics: [
+        {
+          id: 65,
+          name: "Scikit-Learn",
+          desc: "Implement Linear Regression, Classification algorithms, and Clustering tasks.",
+          code: `# model = LinearRegression()
+# model.fit(X_train, y_train)
+print("Scikit-Learn model training initiated.")
+print("Training R^2 Score achieved: 0.925")`,
+          output: "Scikit-Learn model training initiated.\nTraining R^2 Score achieved: 0.925"
+        }
+      ]
+    },
+    {
+      id: 20,
+      name: "Phase 20: AI & Deep Learning",
+      topics: [
+        {
+          id: 66,
+          name: "TensorFlow & Keras",
+          desc: "Build and define neural network architecture layers to compile AI models.",
+          code: `# model = keras.Sequential([keras.layers.Dense(128)])
+print("TensorFlow model backend loaded.")
+print("Compiling: optimizer='adam', loss='sparse_categorical_crossentropy'")`,
+          output: "TensorFlow model backend loaded.\nCompiling: optimizer='adam', loss='sparse_categorical_crossentropy'"
+        },
+        {
+          id: 67,
+          name: "Neural Networks",
+          desc: "Understand backpropagation, weights, activation functions, and layer structures.",
+          code: `print("Initializing feedforward weights.")
+print("Applying ReLU activation function on dense layers.")`,
+          output: "Initializing feedforward weights.\nApplying ReLU activation function on dense layers."
+        },
+        {
+          id: 68,
+          name: "Deep Learning",
+          desc: "Train deep models over multiple epochs, track loss convergence and validate accuracy.",
+          code: `print("Epoch 1/5 - loss: 0.2452 - accuracy: 0.9125")
+print("Epoch 5/5 - loss: 0.0415 - accuracy: 0.9852")
+print("AI Model Training Completed successfully!")`,
+          output: "Epoch 1/5 - loss: 0.2452 - accuracy: 0.9125\nEpoch 5/5 - loss: 0.0415 - accuracy: 0.9852\nAI Model Training Completed successfully!"
+        }
+      ]
     }
-  };
+  ];
 
-  const currentTopic = topics[activeTopic];
+  // Helper to flatten topics for index checks
+  const allTopics = phases.flatMap(p => p.topics);
+  const currentTopic = allTopics.find(t => t.id === activeTopicId) || allTopics[0];
 
-  const handleTopicChange = (key) => {
-    setActiveTopic(key);
+  // Load progress from Firestore or LocalStorage on mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      const currentUser = auth.currentUser;
+      let completedSet = new Set();
+      let xp = 0;
+
+      // 1. Try local storage first
+      try {
+        const localCompleted = localStorage.getItem('python_completed_topics');
+        const localXP = localStorage.getItem('python_xp');
+        if (localCompleted) {
+          completedSet = new Set(JSON.parse(localCompleted));
+        }
+        if (localXP) {
+          xp = parseInt(localXP);
+        }
+      } catch (e) {
+        console.error("Failed to load local python progress:", e);
+      }
+
+      // 2. Try Firestore
+      if (currentUser) {
+        try {
+          const userRef = doc(db, "users", currentUser.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            const firestoreCompleted = data.pythonCompleted || [];
+            const firestoreXP = data.pythonXP || 0;
+            
+            if (firestoreCompleted.length > completedSet.size) {
+              completedSet = new Set(firestoreCompleted);
+            }
+            if (firestoreXP > xp) {
+              xp = firestoreXP;
+            }
+          }
+        } catch (err) {
+          console.error("Firestore progress fetch failed:", err);
+        }
+      }
+
+      setCompletedTopics(completedSet);
+      setTotalXP(xp);
+
+      // Focus first uncompleted topic
+      const firstUncompleted = allTopics.find(t => !completedSet.has(t.id));
+      if (firstUncompleted) {
+        setActiveTopicId(firstUncompleted.id);
+      } else {
+        setActiveTopicId(1);
+      }
+    };
+
+    loadProgress();
+  }, []);
+
+  const handleTopicSelect = (topicId) => {
+    // If not freePlay, enforce sequence locks: topic is locked if its predecessor is not completed
+    if (!freePlay && topicId > 1 && !completedTopics.has(topicId - 1)) {
+      alert("🔒 Complete the previous topic to unlock this quest!");
+      return;
+    }
+    setActiveTopicId(topicId);
     setIsRunning(false);
     setHasExecuted(false);
   };
@@ -331,24 +964,67 @@ Odds elements: [1, 3, 5]`
   };
 
   const handleSendToCodeLab = () => {
-    // Save to local storage for Code Lab tab ingestion
     localStorage.setItem('codeLabImportCode', currentTopic.code);
     localStorage.setItem('codeLabLanguage', 'python');
-    // Navigate to Notebook
     navigate('/notebook');
   };
 
-  const getSectionTitle = (cat) => {
-    switch (cat) {
-      case 'basics': return 'Core Python Basics';
-      case 'intermediate': return 'Intermediate Python';
-      case 'advanced': return 'Advanced Python OOP & Flow';
-      default: return 'Python Course';
+  const handleMarkAsCompleted = async () => {
+    if (completedTopics.has(currentTopic.id)) return;
+
+    // Trigger visual confetti burst
+    setConfettiActive(true);
+    setTimeout(() => setConfettiActive(false), 2000);
+
+    const newCompleted = new Set(completedTopics);
+    newCompleted.add(currentTopic.id);
+    setCompletedTopics(newCompleted);
+
+    const newXP = totalXP + 100;
+    setTotalXP(newXP);
+
+    // Save to LocalStorage
+    try {
+      localStorage.setItem('python_completed_topics', JSON.stringify(Array.from(newCompleted)));
+      localStorage.setItem('python_xp', newXP.toString());
+    } catch(e) {}
+
+    // Save to Firestore
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        await updateDoc(userRef, {
+          pythonCompleted: Array.from(newCompleted),
+          pythonXP: newXP
+        });
+      } catch (err) {
+        console.error("Failed to save progress to cloud:", err);
+      }
+    }
+
+    // Automatically focus next topic if exists
+    if (currentTopic.id < allTopics.length) {
+      setTimeout(() => {
+        setActiveTopicId(currentTopic.id + 1);
+        setIsRunning(false);
+        setHasExecuted(false);
+      }, 1000);
     }
   };
 
-  // Group topics by category
-  const categories = ['basics', 'intermediate', 'advanced'];
+  const getRank = (xp) => {
+    const level = Math.floor(xp / 500) + 1;
+    if (level >= 15) return { level, title: "AI Archmage", badge: Award };
+    if (level >= 12) return { level, title: "Algorithm Master", badge: Trophy };
+    if (level >= 8) return { level, title: "OOP Overlord", badge: Award };
+    if (level >= 5) return { level, title: "Loop Lieutenant", badge: Sparkles };
+    if (level >= 3) return { level, title: "Variable Voyager", badge: Compass };
+    return { level, title: "Python Rookie", badge: Zap };
+  };
+
+  const currentRank = getRank(totalXP);
+  const RankIcon = currentRank.badge;
 
   return (
     <div className="flex flex-col h-screen bg-[#f9fafb] font-sans">
@@ -357,85 +1033,186 @@ Odds elements: [1, 3, 5]`
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
-            <BookOpen className="w-4 h-4" />
+            <Compass className="w-4 h-4" />
           </div>
-          <span className="font-bold text-gray-900">Python Curriculum (Basic to Advanced)</span>
+          <span className="font-bold text-gray-900">Python Mastery Roadmap (Gamified Quest)</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span 
-            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm"
-            style={{ backgroundColor: accentColor }}
+
+        {/* Free Play Toggle */}
+        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 py-1 px-3 rounded-xl shadow-inner text-xs font-bold text-gray-500 select-none">
+          <span>Free Play (Unlock All)</span>
+          <button 
+            onClick={() => setFreePlay(!freePlay)} 
+            className={`w-10 h-5.5 rounded-full p-0.5 transition-colors duration-200 cursor-pointer ${freePlay ? 'bg-indigo-500' : 'bg-gray-300'}`}
           >
-            Interactive Learning Guide
-          </span>
+            <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform duration-200 transform ${freePlay ? 'translate-x-4.5' : 'translate-x-0'}`} />
+          </button>
         </div>
       </header>
 
-      {/* Main Layout: Course Sidebar navigation & Workspace pane */}
+      {/* Confetti Animation Effect Overlay */}
+      <AnimatePresence>
+        {confettiActive && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center bg-transparent"
+          >
+            <div className="text-center bg-white/90 border border-indigo-150 p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 animate-bounce">
+              <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                <Trophy className="w-6 h-6 animate-pulse" />
+              </div>
+              <h3 className="font-black text-indigo-700 text-lg">Topic Completed!</h3>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">+100 XP Level Up Points Awarded</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Body */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* Left Side: Topic Outline */}
-        <aside className="w-80 border-r border-gray-250 bg-white flex flex-col shrink-0 select-none">
-          <div className="p-5 border-b border-gray-150 flex items-center gap-2">
-            <Bookmark className="w-4 h-4 text-indigo-500" />
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Course Curriculum</h3>
+        {/* Left Side: Game Map Timeline (68 topics) */}
+        <aside className="w-96 border-r border-gray-250 bg-white flex flex-col shrink-0 select-none">
+          
+          {/* Rank Badge & XP Dashboard */}
+          <div className="p-5 border-b border-gray-150 bg-slate-900 text-white space-y-3.5 relative overflow-hidden shrink-0">
+            <div className="flex justify-between items-center relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/35 flex items-center justify-center text-indigo-400">
+                  <RankIcon className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Current Level {currentRank.level}</h4>
+                  <p className="text-sm font-black text-slate-100">{currentRank.title}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Total XP</h4>
+                <p className="text-base font-black text-indigo-400 font-mono">{totalXP.toLocaleString()} XP</p>
+              </div>
+            </div>
+
+            {/* Total Completion Progress Bar */}
+            <div className="space-y-1.5 relative z-10 text-left">
+              <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                <span>Course Completion Quest</span>
+                <span>{completedTopics.size} / {allTopics.length} Topics ({Math.round((completedTopics.size / allTopics.length) * 100)}%)</span>
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-850">
+                <div 
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700"
+                  style={{ width: `${(completedTopics.size / allTopics.length) * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Background Blur Sparkle */}
+            <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
           </div>
-          <nav className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
-            {categories.map((cat) => (
-              <div key={cat} className="space-y-1.5">
-                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest px-2.5">
-                  {getSectionTitle(cat)}
-                </span>
-                <div className="space-y-0.5">
-                  {Object.entries(topics)
-                    .filter(([_, value]) => value.category === cat)
-                    .map(([key, value]) => {
-                      const isActive = activeTopic === key;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => handleTopicChange(key)}
-                          className={`w-full text-left py-2.5 px-3 rounded-xl text-[13px] font-bold transition-all cursor-pointer flex items-center justify-between ${
-                            isActive 
-                              ? 'bg-indigo-55 hover:bg-indigo-50/50 text-indigo-650 font-black border-l-4 border-indigo-500 shadow-sm' 
-                              : 'text-gray-655 hover:bg-gray-50 text-gray-500 hover:text-gray-800'
-                          }`}
-                        >
-                          <span>{value.name}</span>
-                          {isActive && <CheckCircle className="w-3.5 h-3.5 text-indigo-500" />}
-                        </button>
-                      );
-                    })}
+
+          {/* Gamified Road Map Node List */}
+          <nav className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar bg-slate-50/50">
+            {phases.map((phase) => (
+              <div key={phase.id} className="space-y-3.5 relative">
+                
+                {/* Phase Divider Header */}
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-3.5 rounded-full bg-indigo-500" />
+                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">
+                    {phase.name}
+                  </span>
+                </div>
+
+                {/* Grid / Path representation of Topic levels */}
+                <div className="grid grid-cols-4 gap-3">
+                  {phase.topics.map((topic) => {
+                    const isCompleted = completedTopics.has(topic.id);
+                    const isActive = activeTopicId === topic.id;
+                    
+                    // Enforce lock if predecessor not finished (unless freePlay is active)
+                    const isLocked = !freePlay && topic.id > 1 && !completedTopics.has(topic.id - 1);
+
+                    return (
+                      <button
+                        key={topic.id}
+                        onClick={() => handleTopicSelect(topic.id)}
+                        className={`aspect-square rounded-2xl border flex flex-col items-center justify-center relative cursor-pointer active:scale-95 transition-all shadow-sm ${
+                          isCompleted
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-emerald-50'
+                            : isActive
+                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-extrabold ring-4 ring-indigo-100 scale-105'
+                            : isLocked
+                            ? 'bg-gray-100 border-gray-200 text-gray-400 opacity-60'
+                            : 'bg-white border-gray-200 hover:border-indigo-300 text-gray-700'
+                        }`}
+                        title={topic.name}
+                      >
+                        {isCompleted ? (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                            <Check className="w-3.5 h-3.5 stroke-[3px]" />
+                          </div>
+                        ) : isLocked ? (
+                          <Lock className="w-4.5 h-4.5 text-gray-400" />
+                        ) : (
+                          <span className="font-mono font-black text-sm">{topic.id}</span>
+                        )}
+                        <span className="text-[9px] font-black tracking-tight mt-1 truncate max-w-[65px] uppercase">
+                          {isCompleted ? "Done" : isLocked ? "Locked" : `Lvl ${topic.id}`}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </nav>
         </aside>
 
-        {/* Right Side: Topic details, Interactive Code Block, and Output Simulator */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar relative bg-[#f9fafb]">
-          <div className="max-w-[1000px] mx-auto space-y-6">
+        {/* Right Side: Quest Details & Live Simulator */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar bg-white">
+          <div className="max-w-[850px] mx-auto space-y-6">
             
-            {/* Concept Explanation Card */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 border border-indigo-100 py-1 px-2.5 rounded-lg">
-                  {getSectionTitle(currentTopic.category)}
-                </span>
+            {/* active quest study block */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex justify-between items-start gap-4">
+              <div className="text-left space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 border border-indigo-100 py-1 px-2.5 rounded-lg shadow-sm">
+                    {phases.find(p => p.topics.some(t => t.id === currentTopic.id))?.name}
+                  </span>
+                  <span className="text-xs font-bold text-gray-400">Quest Level {currentTopic.id}</span>
+                </div>
+                <h2 className="text-2xl font-black text-gray-900 leading-snug">{currentTopic.name}</h2>
+                <p className="text-sm text-gray-500 leading-relaxed mt-2">{currentTopic.desc}</p>
               </div>
-              <h2 className="text-2xl font-black text-gray-900 leading-snug">{currentTopic.name}</h2>
-              <p className="text-sm text-gray-500 leading-relaxed mt-2">{currentTopic.desc}</p>
+
+              {/* Complete Topic Action Badge */}
+              <div className="shrink-0 flex flex-col items-center">
+                {completedTopics.has(currentTopic.id) ? (
+                  <div className="px-4 py-2.5 bg-emerald-50 border border-emerald-150 rounded-2xl flex items-center gap-1.5 text-emerald-600 text-xs font-black uppercase tracking-wider shadow-sm select-none">
+                    <CheckCircle className="w-4 h-4 fill-emerald-500 text-white" /> Complete ✓
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleMarkAsCompleted}
+                    className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:brightness-95 active:scale-98 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <Trophy className="w-3.5 h-3.5 fill-white" /> Complete Topic (+100 XP)
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Code & Output visualizer */}
+            {/* Code Block & Output Sandbox */}
             <div className="grid grid-cols-1 gap-6">
               
-              {/* Python Code snippet */}
+              {/* code playground box */}
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
                 <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3 shrink-0">
                   <div className="flex items-center gap-2">
                     <Code2 className="w-5 h-5 text-indigo-400" />
-                    <span className="text-xs font-bold text-slate-400 font-mono">Example Python Implementation</span>
+                    <span className="text-xs font-bold text-slate-400 font-mono">Interactive Python Code Box</span>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -455,20 +1232,19 @@ Odds elements: [1, 3, 5]`
                   </div>
                 </div>
                 
-                {/* Code syntax-style display */}
-                <div className="font-mono text-[13px] text-slate-300 space-y-1 relative z-10 select-text overflow-x-auto">
+                <div className="font-mono text-[13px] text-slate-300 space-y-1 relative z-10 select-text overflow-x-auto text-left">
                   <pre className="whitespace-pre">{currentTopic.code}</pre>
                 </div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[40px] pointer-events-none" />
               </div>
 
-              {/* Console Output Simulator */}
+              {/* simulated output panel */}
               {(isRunning || hasExecuted) && (
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-3 animate-in fade-in slide-in-from-top-4 duration-300">
-                  <h3 className="text-xs font-black text-slate-450 text-slate-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-3">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 border-b border-slate-800 pb-3 text-left">
                     <Terminal className="w-4.5 h-4.5 text-emerald-400" /> Interactive Console Output
                   </h3>
-                  <div className="font-mono text-xs text-emerald-400 min-h-[60px] flex flex-col justify-start pr-1 select-text">
+                  <div className="font-mono text-xs text-emerald-400 min-h-[60px] flex flex-col justify-start pr-1 select-text text-left">
                     <div className="text-slate-500 mb-1.5">&gt; python example.py</div>
                     {isRunning ? (
                       <div className="text-slate-400 flex items-center gap-2">
@@ -477,7 +1253,7 @@ Odds elements: [1, 3, 5]`
                       </div>
                     ) : (
                       <>
-                        <pre className="text-slate-105 text-white font-bold leading-relaxed whitespace-pre-wrap">{currentTopic.output}</pre>
+                        <pre className="text-white font-bold leading-relaxed whitespace-pre-wrap">{currentTopic.output}</pre>
                         <div className="text-emerald-500 font-extrabold mt-3">&gt; Process finished with exit code 0.</div>
                       </>
                     )}
