@@ -18,6 +18,7 @@ import CommunityHub from './pages/Community/CommunityHub';
 import AIIntelligence from './pages/AI/AIIntelligence';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import CodeVisualizer from './pages/Dashboard/CodeVisualizer';
+import PythonTutorial from './pages/Dashboard/PythonTutorial';
 
 // Auth Pages
 import Welcome from './pages/Auth/Welcome';
@@ -108,6 +109,7 @@ function App() {
             <Route path="/notebook" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><NotebookDashboard /></DashboardLayout></ProtectedRoute>} />
             <Route path="/notebook/:day" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><NotebookTimeline /></DashboardLayout></ProtectedRoute>} />
             <Route path="/visualizer" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><CodeVisualizer /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/python" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><PythonTutorial /></DashboardLayout></ProtectedRoute>} />
             <Route path="/community" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><CommunityHub /></DashboardLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><DashboardLayout theme={theme} toggleTheme={toggleTheme}><Settings /></DashboardLayout></ProtectedRoute>} />
           </Routes>

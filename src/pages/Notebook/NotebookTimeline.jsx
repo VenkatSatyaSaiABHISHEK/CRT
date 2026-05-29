@@ -166,6 +166,31 @@ const NotebookTimeline = () => {
     }
   }, [codeCells, day]);
 
+  // Load imported code from Python tutorial page
+  useEffect(() => {
+    const importCode = localStorage.getItem('codeLabImportCode');
+    const importLang = localStorage.getItem('codeLabLanguage');
+    if (importCode) {
+      localStorage.removeItem('codeLabImportCode');
+      localStorage.removeItem('codeLabLanguage');
+      
+      const lang = importLang || 'python';
+      setCodeLabLanguage(lang);
+      setCodeCells([
+        { 
+          id: ++globalCellId, 
+          type: 'code', 
+          content: importCode, 
+          output: '', 
+          aiResult: '', 
+          isRunning: false, 
+          isCorrecting: false 
+        }
+      ]);
+      setActiveTab('code');
+    }
+  }, [day]);
+
   // Scroll to bottom only when a new entry is added (entries.length changes)
   useEffect(() => {
     if (activeTab === 'notebook' && entries.length > 0) {
